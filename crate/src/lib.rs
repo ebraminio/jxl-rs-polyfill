@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use jxl::api::*;
-use jxl::image::{Image, Rect};
+use jxl::image::{Image, ImageDataType, Rect};
 
 #[wasm_bindgen]
 pub struct JxlInfo {
@@ -11,9 +11,23 @@ pub struct JxlInfo {
     pub bit_depth: u32,
 }
 
-/// Decode a JXL image to raw RGBA u16 values
-#[wasm_bindgen]
-pub fn decode_jxl_to_rgba(data: &[u8]) -> Result<Vec<u16>, JsValue> {
+trait JxlPixelType: Copy + Default + ImageDataType + 'static {
+    fn data_format() -> JxlDataFormat;
+}
+
+impl JxlPixelType for u8 {
+    fn data_format() -> JxlDataFormat {
+        JxlDataFormat::U8 { bit_depth: 8 }
+    }
+}
+
+impl JxlPixelType for u16 {
+    fn data_format() -> JxlDataFormat {
+        JxlDataFormat::U16 { bit_depth: 16, endianness: Endianness::native() }
+    }
+}
+
+fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<Vec<T>, JsValue> {
     console_error_panic_hook::set_once();
 
     if data.len() < 2 {
@@ -50,7 +64,7 @@ pub fn decode_jxl_to_rgba(data: &[u8]) -> Result<Vec<u16>, JsValue> {
     let num_extra_channels = basic_info.extra_channels.len();
     let pixel_format = JxlPixelFormat {
         color_type: JxlColorType::Rgba,
-        color_data_format: Some(JxlDataFormat::U16 { bit_depth: 16, endianness: Endianness::native() }),
+        color_data_format: Some(T::data_format()),
         extra_channel_format: vec![None; num_extra_channels],
     };
 
@@ -75,7 +89,7 @@ pub fn decode_jxl_to_rgba(data: &[u8]) -> Result<Vec<u16>, JsValue> {
     };
 
     // Allocate and decode frame
-    let mut image_buffer = Image::<u16>::new((stride, height))
+    let mut image_buffer = Image::<T>::new((stride, height))
         .map_err(|e| JsValue::from_str(&format!("Buffer alloc failed: {}", e)))?;
 
     {
@@ -103,12 +117,24 @@ pub fn decode_jxl_to_rgba(data: &[u8]) -> Result<Vec<u16>, JsValue> {
         }
     }
 
-    // Flatten rows into a contiguous RGBA u16 buffer
-    let mut out = Vec::<u16>::with_capacity(stride * height);
+    // Flatten rows into a contiguous RGBA buffer
+    let mut out = Vec::<T>::with_capacity(stride * height);
     for y in 0..height {
         out.extend_from_slice(image_buffer.row(y));
     }
     Ok(out)
+}
+
+/// Decode a JXL image to raw RGBA u8 values
+#[wasm_bindgen]
+pub fn decode_jxl_to_rgba8(data: &[u8]) -> Result<Vec<u8>, JsValue> {
+    decode_jxl_to_rgba::<u8>(data)
+}
+
+/// Decode a JXL image to raw RGBA u16 values
+#[wasm_bindgen]
+pub fn decode_jxl_to_rgba16(data: &[u8]) -> Result<Vec<u16>, JsValue> {
+    decode_jxl_to_rgba::<u16>(data)
 }
 
 #[wasm_bindgen]
