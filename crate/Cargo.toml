@@ -8,11 +8,11 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = "0.2"
-jxl = { git = "https://github.com/libjxl/jxl-rs" }
+jxl = { git = "https://github.com/mertalev/jxl-rs", branch = "feat/wasm-simd128", features = ["simd128"] }
 console_error_panic_hook = "0.1.7"
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 lto = true
 codegen-units = 1
 

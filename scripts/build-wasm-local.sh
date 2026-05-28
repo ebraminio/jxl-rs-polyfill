@@ -40,7 +40,7 @@ cd "$JXL_RS_DIR/jxl_wasm"
 BUILD_OUTPUT="$PROJECT_DIR/.build/pkg"
 mkdir -p "$BUILD_OUTPUT"
 
-wasm-pack build --target web --release --out-dir "$BUILD_OUTPUT"
+RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" wasm-pack build --target web --release --out-dir "$BUILD_OUTPUT"
 
 # Copy WASM artifacts to dist
 echo "Copying WASM artifacts..."

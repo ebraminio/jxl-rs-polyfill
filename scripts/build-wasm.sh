@@ -24,7 +24,7 @@ cd "$BUILD_DIR"
 # Ensure we have the latest dependencies
 # cargo update
 
-wasm-pack build --target web --release --out-dir "$PROJECT_DIR/.build/pkg"
+RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" wasm-pack build --target web --release --out-dir "$PROJECT_DIR/.build/pkg"
 
 # Copy WASM artifacts to dist
 echo "Copying WASM artifacts..."
