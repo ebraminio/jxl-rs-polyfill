@@ -27,7 +27,7 @@ impl JxlPixelType for u16 {
     }
 }
 
-fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<Vec<T>, JsValue> {
+fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<(Vec<T>, u32, u32), JsValue> {
     console_error_panic_hook::set_once();
 
     if data.len() < 2 {
@@ -113,19 +113,69 @@ fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<Vec<T>, JsValue> {
             }
         }
     }
-    Ok(out)
+    Ok((out, width as u32, height as u32))
 }
 
-/// Decode a JXL image to raw RGBA u8 values
 #[wasm_bindgen]
-pub fn decode_jxl_to_rgba8(data: &[u8]) -> Result<Vec<u8>, JsValue> {
-    decode_jxl_to_rgba::<u8>(data)
+pub struct RgbaU8Buffer {
+    data: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
 }
 
-/// Decode a JXL image to raw RGBA u16 values
 #[wasm_bindgen]
-pub fn decode_jxl_to_rgba16(data: &[u8]) -> Result<Vec<u16>, JsValue> {
-    decode_jxl_to_rgba::<u16>(data)
+impl RgbaU8Buffer {
+    /// Byte offset of the pixel data within WASM linear memory.
+    /// Create a zero-copy view with: `new Uint8Array(wasm.memory.buffer, buf.ptr(), buf.byte_len())`
+    pub fn ptr(&self) -> u32 {
+        self.data.as_ptr() as u32
+    }
+    /// Total number of bytes (width * height * 4).
+    pub fn byte_len(&self) -> u32 {
+        self.data.len() as u32
+    }
+}
+
+#[wasm_bindgen]
+pub struct RgbaU16Buffer {
+    data: Vec<u16>,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[wasm_bindgen]
+impl RgbaU16Buffer {
+    /// Byte offset of the pixel data within WASM linear memory.
+    /// Create a zero-copy view with: `new Uint16Array(wasm.memory.buffer, buf.ptr(), buf.len())`
+    pub fn ptr(&self) -> u32 {
+        self.data.as_ptr() as u32
+    }
+    /// Number of u16 elements (width * height * 4).
+    pub fn len(&self) -> u32 {
+        self.data.len() as u32
+    }
+    /// Total number of bytes (width * height * 8).
+    pub fn byte_len(&self) -> u32 {
+        self.data.len() as u32 * 2
+    }
+}
+
+/// Decode a JXL image to raw RGBA u8 values.
+/// Returns a buffer whose pixel data lives in WASM memory — use `.ptr()` and `.byte_len()`
+/// for a zero-copy `Uint8Array` view. Call `.free()` when done (or rely on GC).
+#[wasm_bindgen]
+pub fn decode_jxl_to_rgba8(data: &[u8]) -> Result<RgbaU8Buffer, JsValue> {
+    let (pixels, width, height) = decode_jxl_to_rgba::<u8>(data)?;
+    Ok(RgbaU8Buffer { data: pixels, width, height })
+}
+
+/// Decode a JXL image to raw RGBA u16 values.
+/// Returns a buffer whose pixel data lives in WASM memory — use `.ptr()` and `.len()`
+/// for a zero-copy `Uint16Array` view. Call `.free()` when done (or rely on GC).
+#[wasm_bindgen]
+pub fn decode_jxl_to_rgba16(data: &[u8]) -> Result<RgbaU16Buffer, JsValue> {
+    let (pixels, width, height) = decode_jxl_to_rgba::<u16>(data)?;
+    Ok(RgbaU16Buffer { data: pixels, width, height })
 }
 
 #[wasm_bindgen]

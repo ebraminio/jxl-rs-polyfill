@@ -8,7 +8,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = "0.2"
-jxl = { git = "https://github.com/mertalev/jxl-rs", branch = "feat/wasm-simd128", features = ["simd128"] }
+jxl = { git = "https://github.com/mertalev/jxl-rs", rev = "da909d2703a3870bfb421c144aa597579b74ea4e", features = ["simd128"] }
 console_error_panic_hook = "0.1.7"
 
 [profile.release]
