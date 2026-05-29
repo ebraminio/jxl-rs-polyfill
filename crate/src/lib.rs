@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use jxl::api::*;
-use jxl::image::{Image, ImageDataType, Rect};
+use jxl::image::ImageDataType;
 
 #[wasm_bindgen]
 pub struct JxlInfo {
@@ -88,19 +88,16 @@ fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<Vec<T>, JsValue> {
         }
     };
 
-    // Allocate and decode frame
-    let mut image_buffer = Image::<T>::new((stride, height))
-        .map_err(|e| JsValue::from_str(&format!("Buffer alloc failed: {}", e)))?;
-
+    // Allocate flat output buffer and decode directly into it
+    let size = stride * height;
+    let mut out = vec![T::default(); size];
     {
-        let rect = Rect {
-            origin: (0, 0),
-            size: (stride, height),
+        let bytes_per_row = stride * std::mem::size_of::<T>();
+        // Safety: T is u8 or u16 — primitive types with no padding, valid for any bit pattern.
+        let byte_slice = unsafe {
+            std::slice::from_raw_parts_mut(out.as_mut_ptr() as *mut u8, size * std::mem::size_of::<T>())
         };
-
-        let mut buffers = vec![JxlOutputBuffer::from_image_rect_mut(
-            image_buffer.get_rect_mut(rect).into_raw()
-        )];
+        let mut buffers = vec![JxlOutputBuffer::new(byte_slice, height, bytes_per_row)];
 
         let mut dec3 = decoder_with_frame;
         loop {
@@ -115,12 +112,6 @@ fn decode_jxl_to_rgba<T: JxlPixelType>(data: &[u8]) -> Result<Vec<T>, JsValue> {
                 Err(e) => return Err(JsValue::from_str(&format!("JXL decode error: {}", e))),
             }
         }
-    }
-
-    // Flatten rows into a contiguous RGBA buffer
-    let mut out = Vec::<T>::with_capacity(stride * height);
-    for y in 0..height {
-        out.extend_from_slice(image_buffer.row(y));
     }
     Ok(out)
 }
