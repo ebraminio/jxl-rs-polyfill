@@ -4,7 +4,7 @@ const wasm = await init();
 const buffer = new Uint8Array(await (await fetch('./Webkit-logo-P3.jxl')).arrayBuffer());
 
 const buf = decode_jxl(buffer);
-console.log(buf.width, buf.height, buf.bit_depth, buf.has_alpha, buf.num_frames);
+console.log(buf.width, buf.height, buf.bit_depth, buf.has_alpha, buf.is_animated);
 const pixels = buf.bit_depth > 8
     ? new Uint16Array(wasm.memory.buffer, buf.ptr(), buf.byte_len() / 2)
     : new Uint8Array(wasm.memory.buffer, buf.ptr(), buf.byte_len());

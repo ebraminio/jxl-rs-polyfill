@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use jxl::api::*;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct JxlBuffer {
@@ -8,7 +8,7 @@ pub struct JxlBuffer {
     pub height: u32,
     pub bit_depth: u32,
     pub has_alpha: bool,
-    pub num_frames: usize,
+    pub is_animated: bool,
 }
 
 #[wasm_bindgen]
@@ -33,8 +33,7 @@ pub fn decode_jxl(data: &[u8]) -> Result<JxlBuffer, JsValue> {
         return Err(JsValue::from_str("Input too small to be a JXL file"));
     }
 
-    let options = JxlDecoderOptions::default();
-    let decoder = JxlDecoder::new(options);
+    let decoder = JxlDecoder::new(JxlDecoderOptions::default());
     let mut input = data;
 
     // Advance to image info
@@ -56,7 +55,7 @@ pub fn decode_jxl(data: &[u8]) -> Result<JxlBuffer, JsValue> {
     let (width, height) = basic_info.size;
     let bit_depth = basic_info.bit_depth.bits_per_sample();
     let has_alpha = !basic_info.extra_channels.is_empty();
-    let num_frames = if basic_info.animation.is_some() { 2 } else { 1 };
+    let is_animated = basic_info.animation.is_some();
 
     if width == 0 || height == 0 {
         return Err(JsValue::from_str("Invalid image dimensions"));
@@ -67,7 +66,10 @@ pub fn decode_jxl(data: &[u8]) -> Result<JxlBuffer, JsValue> {
     let pixel_format = JxlPixelFormat {
         color_type: JxlColorType::Rgba,
         color_data_format: Some(if use_u16 {
-            JxlDataFormat::U16 { bit_depth: 16, endianness: Endianness::native() }
+            JxlDataFormat::U16 {
+                bit_depth: 16,
+                endianness: Endianness::native(),
+            }
         } else {
             JxlDataFormat::U8 { bit_depth: 8 }
         }),
@@ -120,6 +122,6 @@ pub fn decode_jxl(data: &[u8]) -> Result<JxlBuffer, JsValue> {
         height: height as u32,
         bit_depth,
         has_alpha,
-        num_frames,
+        is_animated,
     })
 }
