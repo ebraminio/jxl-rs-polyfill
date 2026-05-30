@@ -1,19 +1,14 @@
 <script type="module">
-import init, { decode_jxl_to_rgba8, decode_jxl_to_rgba16, get_jxl_info } from "/jxl_wasm.js";
+import init, { decode_jxl } from "/jxl_wasm.js";
 const wasm = await init();
 const buffer = new Uint8Array(await (await fetch('./Webkit-logo-P3.jxl')).arrayBuffer());
-const info = get_jxl_info(buffer);
-console.log(info.bit_depth);
-info.free();
 
-const buf8 = decode_jxl_to_rgba8(buffer);
-const pixels8 = new Uint8Array(wasm.memory.buffer, buf8.ptr(), buf8.byte_len());
-console.log(buf8.width, buf8.height, pixels8);
-buf8.free();
-
-const buf16 = decode_jxl_to_rgba16(buffer);
-const pixels16 = new Uint16Array(wasm.memory.buffer, buf16.ptr(), buf16.len());
-console.log(buf16.width, buf16.height, pixels16);
-buf16.free();
+const buf = decode_jxl(buffer);
+console.log(buf.width, buf.height, buf.bit_depth, buf.has_alpha, buf.num_frames);
+const pixels = buf.bit_depth > 8
+    ? new Uint16Array(wasm.memory.buffer, buf.ptr(), buf.byte_len() / 2)
+    : new Uint8Array(wasm.memory.buffer, buf.ptr(), buf.byte_len());
+console.log(pixels);
+buf.free();
 </script>
 <img id="img">
